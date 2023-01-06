@@ -16,6 +16,7 @@ It is a component which can trigger other things (such as an `output` device) wh
   - [Using local sources in esphome](#using-local-sources-in-esphome)
   - [Updating `README.md`](#updating-readmemd)
   - [References and Reading](#references-and-reading)
+- [Security Considerations](#security-considerations)
 - [Help, Feedback, and Ideas](#help-feedback-and-ideas)
 - [License & Credit](#license--credit)
 
@@ -108,6 +109,13 @@ Here are some things I found helpful:
 * An unrelated ble stack bugreport, but with great discussion: https://github.com/espressif/arduino-esp32/issues/1038
 * BLE officially assigned numbers (PDF): https://btprodspecificationrefs.blob.core.windows.net/assigned-numbers/Assigned%20Number%20Types/Assigned%20Numbers.pdf
 
+## Security Considerations
+
+**Warning:** You should consider this component **totally insecure**.
+
+It is still just a hack, and I have made no attempt to validate its security properties. For example, someone with the means to sniff nearby BLE traffic could likely capture and replay your PIN.
+
+No warranty. Please review `LICENSE.txt`.
 
 ## Help, Feedback, and Ideas
 
