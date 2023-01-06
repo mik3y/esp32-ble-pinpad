@@ -58,9 +58,21 @@ Finally, add the component itself:
 esp32_ble_pinpad:
   static_secret_pin: "1234"
   status_indicator: onboard_status_led
+  on_pinpad_accepted:
+    - logger.log: "Rad! Correct pin was given!"
+  on_pinpad_rejected:
+    - logger.log: "Bummer! Incorrect pin was given."
 ```
 
 Note that `static_secret_pin` must be a string. You can make it all numbers, but you'll need to quote it if so (yaml is fun).
+
+Of course, you'll probably want to do something other than log when the pin comes in. You can use [any availabe ESPHome trigger](https://esphome.io/guides/automations.html#all-triggers) here. For example, if you have a garage door set up as a cover, you could do:
+
+```yml
+  on_pinpad_accepted:
+    - logger.log: "Got pin over BLE, opening door."
+    - cover.toggle: garage_door
+```
 
 ## Configuration options
 

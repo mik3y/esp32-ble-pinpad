@@ -47,7 +47,7 @@ CONFIG_SCHEMA = cv.Schema(
         ),
         cv.Optional(CONF_ON_PINPAD_REJECTED): automation.validate_automation(
             {
-                cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PinpadAcceptedTrigger),
+                cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PinpadRejectedTrigger),
             }
         ),
         cv.Optional(CONF_STATUS_INDICATOR): cv.use_id(output.BinaryOutput),

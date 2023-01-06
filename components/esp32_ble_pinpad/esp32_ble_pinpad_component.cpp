@@ -101,15 +101,21 @@ void ESP32BLEPinpadComponent::set_state_(State state) {
   if (state == old_state) {
     return;
   }
+
   ESP_LOGV(TAG, "Setting state: %d", state);
   this->state_ = state;
   this->current_state_start_ = millis();
+
+  // Publish to status BLE characteristic.
   if (this->status_->get_value().empty() || this->status_->get_value()[0] != state) {
     uint8_t data[1]{state};
     this->status_->set_value(data, 1);
     if (old_state != STATE_STOPPED)
       this->status_->notify();
   }
+
+  // Publish to internal triggers.
+  this->state_callback_.call();
 }
 
 void ESP32BLEPinpadComponent::send_response_(std::vector<uint8_t> &response) {
