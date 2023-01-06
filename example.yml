@@ -1,0 +1,51 @@
+esphome:
+  name: ble-pinpad-example
+
+esp32:
+  board: esp32dev
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [ esp32_ble_pinpad ]
+
+output:
+  - platform: ledc
+    pin: GPIO2
+    id: onboard_status_led
+
+esp32_ble_pinpad:
+  status_indicator: onboard_status_led
+
+# Enable logging
+logger:
+  level: VERBOSE
+  logs:
+    esp32_ble_pinpad.component: VERBOSE
+
+# Enable Home Assistant API
+api:
+  password: ""
+
+ota:
+  password: ""
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: !secret fallback_wifi_ssid
+    password: !secret fallback_wifi_password
+
+captive_portal:
+
+time:
+  - platform: sntp
+    id: sntp_time
+    servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
