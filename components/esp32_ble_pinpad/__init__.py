@@ -8,10 +8,11 @@ from esphome.const import CONF_ID, CONF_TRIGGER_ID
 AUTO_LOAD = ["binary_sensor", "output", "esp32_ble_server"]
 CODEOWNERS = ["@mik3y"]
 CONFLICTS_WITH = ["esp32_ble_tracker", "esp32_ble_beacon"]
-DEPENDENCIES = ["wifi", "esp32"]
+DEPENDENCIES = ["esp32"]
 
 CONF_BLE_SERVER_ID = "ble_server_id"
 CONF_STATUS_INDICATOR = "status_indicator"
+CONF_STATIC_SECRET_PIN = "static_secret_pin"
 CONF_ON_PINPAD_ACCEPTED = "on_pinpad_accepted"
 CONF_ON_PINPAD_REJECTED = "on_pinpad_rejected"
 
@@ -19,6 +20,16 @@ esp32_ble_pinpad_ns = cg.esphome_ns.namespace("esp32_ble_pinpad")
 ESP32BLEPinpadComponent = esp32_ble_pinpad_ns.class_(
     "ESP32BLEPinpadComponent", cg.Component, esp32_ble_server.BLEServiceComponent
 )
+
+def validate_secret_pin(value):
+    value = cv.string_strict(value)
+    if not value:
+        return value
+    try:
+        value.encode('ascii')
+    except UnicodeEncodeError:
+        raise cv.Invalid("pin must consist of only ascii characters")
+    return value
 
 # Triggers
 PinpadAcceptedTrigger = esp32_ble_pinpad_ns.class_("PinpadAcceptedTrigger", automation.Trigger.template())
@@ -28,6 +39,7 @@ CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(ESP32BLEPinpadComponent),
         cv.GenerateID(CONF_BLE_SERVER_ID): cv.use_id(esp32_ble_server.BLEServer),
+        cv.Required(CONF_STATIC_SECRET_PIN): validate_secret_pin,
         cv.Optional(CONF_ON_PINPAD_ACCEPTED): automation.validate_automation(
             {
                 cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PinpadAcceptedTrigger),
@@ -49,6 +61,7 @@ async def to_code(config):
 
     ble_server = await cg.get_variable(config[CONF_BLE_SERVER_ID])
     cg.add(ble_server.register_service_component(var))
+    cg.add(var.set_static_secret_pin(config[CONF_STATIC_SECRET_PIN]))
 
     # cg.add_define("USE_BLE_PINPAD")
 

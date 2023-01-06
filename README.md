@@ -56,8 +56,11 @@ Finally, add the component itself:
 
 ```yml
 esp32_ble_pinpad:
+  static_secret_pin: "1234"
   status_indicator: onboard_status_led
 ```
+
+Note that `static_secret_pin` must be a string. You can make it all numbers, but you'll need to quote it if so (yaml is fun).
 
 ## Configuration options
 

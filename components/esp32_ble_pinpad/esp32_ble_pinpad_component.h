@@ -45,6 +45,9 @@ class ESP32BLEPinpadComponent : public Component, public BLEServiceComponent {
   float get_setup_priority() const override;
   void start() override;
   void stop() override;
+
+  void set_static_secret_pin(const std::string &pin);
+
   bool is_active() const { return this->state_ != STATE_STOPPED; }
 
   void set_status_indicator(output::BinaryOutput *status_indicator) { this->status_indicator_ = status_indicator; }
@@ -56,6 +59,7 @@ class ESP32BLEPinpadComponent : public Component, public BLEServiceComponent {
   State state_{STATE_STOPPED};
 
   std::vector<uint8_t> incoming_data_;
+  std::string static_secret_pin_;
 
   std::shared_ptr<BLEService> service_;
   BLECharacteristic *status_;

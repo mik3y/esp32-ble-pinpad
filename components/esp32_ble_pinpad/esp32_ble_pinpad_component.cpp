@@ -12,6 +12,10 @@ namespace esp32_ble_pinpad {
 
 ESP32BLEPinpadComponent::ESP32BLEPinpadComponent() { }
 
+void ESP32BLEPinpadComponent::set_static_secret_pin(const std::string &pin) {
+  this->static_secret_pin_ = pin;
+}
+
 void ESP32BLEPinpadComponent::setup() {
   ESP_LOGD(TAG, "Setup starting ...");
   this->service_ = global_ble_server->create_service(SERVICE_UUID, true);
