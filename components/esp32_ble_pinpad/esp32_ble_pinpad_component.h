@@ -26,6 +26,8 @@ static const char *const STATUS_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900001";
 static const char *const RPC_COMMAND_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900002";
 static const char *const RPC_RESPONSE_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900003";
 
+static const uint32_t VALIDATION_STATE_HOLD_MILLIS = 500;
+
 enum State : uint8_t {
   STATE_STOPPED = 0x00,
   STATE_IDLE = 0x01,
@@ -49,6 +51,8 @@ class ESP32BLEPinpadComponent : public Component, public BLEServiceComponent {
   void set_static_secret_pin(const std::string &pin);
 
   bool is_active() const { return this->state_ != STATE_STOPPED; }
+  bool is_accepted() const { return this->state_ == STATE_PIN_ACCEPTED; }
+  bool is_rejected() const { return this->state_ == STATE_PIN_REJECTED; }
 
   void set_status_indicator(output::BinaryOutput *status_indicator) { this->status_indicator_ = status_indicator; }
 
@@ -66,11 +70,15 @@ class ESP32BLEPinpadComponent : public Component, public BLEServiceComponent {
   BLECharacteristic *rpc_;
   BLECharacteristic *rpc_response_;
 
+  // Timestamp we entered current state, in millis
+  uint32_t current_state_start_{0};
+
   output::BinaryOutput *status_indicator_{nullptr};
 
   void set_state_(State state);
   void send_response_(std::vector<uint8_t> &response);
   void process_incoming_data_();
+  void validate_pin_(std::string pin);
 };
 
 }  // namespace esp32_ble_pinpad

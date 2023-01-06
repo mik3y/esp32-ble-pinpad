@@ -73,16 +73,24 @@ void ESP32BLEPinpadComponent::loop() {
       }
       break;
     case STATE_IDLE : {
-      if (this->status_indicator_ != nullptr)
+      if (this->status_indicator_ != nullptr) {
         this->status_indicator_->turn_off();
+      }
       break;
     }
     case STATE_PIN_ACCEPTED : {
-      this->incoming_data_.clear();
+      if (this->status_indicator_ != nullptr) {
+        this->status_indicator_->turn_on();
+      }
+      if (now - this->current_state_start_ > VALIDATION_STATE_HOLD_MILLIS) {
+        this->set_state_(STATE_IDLE);
+      }
       break;
     }
     case STATE_PIN_REJECTED: {
-      this->incoming_data_.clear();
+      if (now - this->current_state_start_ > VALIDATION_STATE_HOLD_MILLIS) {
+        this->set_state_(STATE_IDLE);
+      }
       break;
     }
   }
@@ -95,6 +103,7 @@ void ESP32BLEPinpadComponent::set_state_(State state) {
   }
   ESP_LOGV(TAG, "Setting state: %d", state);
   this->state_ = state;
+  this->current_state_start_ = millis();
   if (this->status_->get_value().empty() || this->status_->get_value()[0] != state) {
     uint8_t data[1]{state};
     this->status_->set_value(data, 1);
@@ -139,18 +148,25 @@ void ESP32BLEPinpadComponent::process_incoming_data_() {
     return;
   }
 
-  ESP_LOGD(TAG, "Processing bytes - %s", format_hex_pretty(this->incoming_data_).c_str());
+  ESP_LOGD(TAG, "Processing pin message - %s", format_hex_pretty(this->incoming_data_).c_str());
   if (data_len > INPUT_MAX_LEN) {
     ESP_LOGV(TAG, "Too much data came in, or malformed resetting buffer...");
-    this->incoming_data_.clear();
   } else {
-    const char last_char = this->incoming_data_[data_len - 1];
-    if (last_char == '\0' || last_char == '\n') {
-      ESP_LOGV(TAG, "Processing pin input!");
-      this->incoming_data_.clear();
-    } else {
-      ESP_LOGV(TAG, "Waiting for more data ...");
-    }
+    ESP_LOGV(TAG, "Processing pin input!");
+    const std::string candidate_pin(this->incoming_data_.begin(), this->incoming_data_.end());
+    this->validate_pin_(candidate_pin);
+  }
+  this->incoming_data_.clear();
+}
+
+void ESP32BLEPinpadComponent::validate_pin_(std::string pin) {
+  // TODO(mikey): Does ESPHOME support constant time compare?
+  if (this->static_secret_pin_ == pin) {
+    ESP_LOGD(TAG, "Pin accepted");
+    this->set_state_(STATE_PIN_ACCEPTED);
+  } else {
+    ESP_LOGD(TAG, "Pin rejected");
+    this->set_state_(STATE_PIN_REJECTED);
   }
 }
 
