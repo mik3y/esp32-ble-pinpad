@@ -17,7 +17,8 @@ output:
 
 esp32_ble_pinpad:
   status_indicator: onboard_status_led
-  static_secret_pin: "1234"
+  security_mode: hotp
+  secret_passcode: changeme
   on_pinpad_accepted:
     - logger.log: "Rad! Correct pin was given!"
   on_pinpad_rejected:
