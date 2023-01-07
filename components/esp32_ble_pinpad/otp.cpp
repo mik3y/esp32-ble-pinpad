@@ -15,7 +15,7 @@
  */
 uint32_t otp::hotp_generate(uint8_t *key, size_t key_len, uint64_t interval, size_t digits)
 {
-    uint8_t *digest = nullptr;
+    uint8_t digest[128];
     uint32_t endianness;
 
     // Endianness detection
@@ -27,7 +27,7 @@ uint32_t otp::hotp_generate(uint8_t *key, size_t key_len, uint64_t interval, siz
     };
 
     // First Phase, get the digest of the message using the provided key ...
-    hotp_hmac(key, key_len, interval, digest);
+    hotp_hmac(key, key_len, interval, (uint8_t *)&digest);
 
     // Second Phase, get the dbc from the algorithm
     uint32_t dbc = hotp_dt(digest);
