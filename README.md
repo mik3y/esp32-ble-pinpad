@@ -41,7 +41,7 @@ In your esphome YML, first import this component:
 external_components:
   - source:
       type: git
-      url: https://github.com/mik3y/esp32_ble_pinpad
+      url: https://github.com/mik3y/esp32-ble-pinpad
       ref: main
     components: [ esp32_ble_pinpad ]
 ```
@@ -109,7 +109,7 @@ To authenticate ("pin in"), a client performs the following steps:
 
 A debug program is included at `tools/pypinpad/pypinpad.py` which can be used to send a pin to a locally-discoverable BLE device.
 
-To install the tool's dependencys, `poetry` is required.
+To install the tool's dependencies, `poetry` is required.
 
 ```
 cd tools/pypinpad
