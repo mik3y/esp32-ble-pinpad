@@ -100,9 +100,9 @@ To authenticate ("pin in"), a client performs the following steps:
 1. Discover the device and create a BLE connection to the pinpad service.
 2. Read the `security_mode` setting of the device. This is available at the `PINPAD_SECURITY_MODE_CHR_UUID` BLE GATT characteristic.
 3. Compute the secret to send:
-    a. If `security_mode = none`, the value of `secret_passcode` is sent in full and in the clear. _This is the least secure option and is not recommended._
-    b. If `security_mode = hotp`, the client must read the current HOTP counter from `PINPAD_HOTP_COUNTER_CHR_UUID`, then generate and send a 6-digit HOTP code based on that value and using `secret_passcode` as the key.
-    c. If `security_mode = totp`, the client must generate and send a 6-digit TOTP code based on the current time and using `secret_passcode` as the key.
+    1. If `security_mode = none`, the value of `secret_passcode` is sent in full and in the clear. _This is the least secure option and is not recommended._
+    2. If `security_mode = hotp`, the client must read the current HOTP counter from `PINPAD_HOTP_COUNTER_CHR_UUID`, then generate and send a 6-digit HOTP code based on that value and using `secret_passcode` as the key.
+    3. If `security_mode = totp`, the client must generate and send a 6-digit TOTP code based on the current time and using `secret_passcode` as the key.
 4. Optionally, read `PINPAD_RPC_RESPONSE_CHR_UUID` to determine whether the operation succeeded.
 
 ## Testing
@@ -169,7 +169,6 @@ Please open an issue on GitHub!
 
 Here are some ideas I haven't gotten around to yet.
 
-- Implement TOTP and accept one-time pins.
 - BLE interface for adding/revoking pins (using some sort of admin pin).
 - BLE interface for reading attempt history.
 
