@@ -156,7 +156,7 @@ doctoc --notitle --github README.md
 
 ### References and Reading
 
-Here are some things I found helpful:
+Here are some things I found helpful while learning about BLE:
 
 * An overview of BLE (protocol & stack): https://novelbits.io/bluetooth-low-energy-ble-complete-guide
 * An unrelated ble stack bugreport, but with great discussion: https://github.com/espressif/arduino-esp32/issues/1038
@@ -174,6 +174,10 @@ Here are some ideas I haven't gotten around to yet.
 
 ## License & Credit
 
-Written by **@mik3y**. Licensed under GPLv3 (same as esphome).
+Written by **@mik3y**. 
 
-Greatly inspired by & indebted to the built-in [esp32_improv component](https://github.com/esphome/esphome/blob/dev/esphome/components/esp32_improv).
+All code is offered under the MIT license. See `LICENSE.txt` for full terms.
+
+This project includes a copy of the [esp-totp library](https://github.com/huming2207/esp-totp) by Jackson Ming Hu, also MIT licensed. See `otp.{cpp,h}`.
+
+Inspired by & indebted to the built-in [esp32_improv component](https://github.com/esphome/esphome/blob/dev/esphome/components/esp32_improv).
