@@ -12,11 +12,12 @@ It is a component which can trigger other things (such as an `output` device) wh
 - [Why?](#why)
 - [Usage](#usage)
 - [Configuration options](#configuration-options)
+- [Protocol (how it works)](#protocol-how-it-works)
+- [Security](#security)
 - [Developer Instructions](#developer-instructions)
   - [Using local sources in esphome](#using-local-sources-in-esphome)
   - [Updating `README.md`](#updating-readmemd)
   - [References and Reading](#references-and-reading)
-- [Security Considerations](#security-considerations)
 - [Help, Feedback, and Ideas](#help-feedback-and-ideas)
 - [License & Credit](#license--credit)
 
@@ -57,15 +58,14 @@ Finally, add the component itself:
 
 ```yml
 esp32_ble_pinpad:
-  static_secret_pin: "1234"
+  secret_passcode: changeme
+  security_mode: hotp
   status_indicator: onboard_status_led
   on_pinpad_accepted:
     - logger.log: "Rad! Correct pin was given!"
   on_pinpad_rejected:
     - logger.log: "Bummer! Incorrect pin was given."
 ```
-
-Note that `static_secret_pin` must be a string. You can make it all numbers, but you'll need to quote it if so (yaml is fun).
 
 Of course, you'll probably want to do something other than log when the pin comes in. You can use [any availabe ESPHome trigger](https://esphome.io/guides/automations.html#all-triggers) here. For example, if you have a garage door set up as a cover, you could do:
 
@@ -79,10 +79,38 @@ Of course, you'll probably want to do something other than log when the pin come
 
 You can provide these options in the `esp32_ble_pinpad` yaml block:
 
-* **`static_secret_pin`** (required): The pin value which will be accepted.
+* **`secret_passcode`** (required): The secret passcode. Follow strong password rules for best security (i.e. longer values are better).
+* **`security_mode`** (required): One of `none`, `hotp`, or `totp`. If in doubt, `hotp` is recommended.
+    * **Warning:** Using `none` is highly insecure, as it means the passcode will be exposed over-the-wire. See _Security_ for further information.
 * **`status_indicator`** (optional): An `output` to use for blinking status.
 * **`on_pinpad_accepted`** (optional): Trigger(s) to fire when a PIN is accepted.
 * **`on_pinpad_rejected`** (optional): Trigger(s) to fire when a PIN is rejected.
+
+
+## Protocol (how it works)
+
+Two configuration factors are set by you and flashed into the device:
+
+* `secret_passcode`: The value you will use and give to anyone wishing to "pin in".
+* `security_mode`: One of `none`, `hotp`, or `totp`, this determines how the passcode is used.
+
+To authenticate ("pin in"), a client performs the following steps:
+
+1. Discover the device and create a BLE connection to the pinpad service.
+2. Read the `security_mode` setting of the device. This is available at the `PINPAD_SECURITY_MODE_CHR_UUID` BLE GATT characteristic.
+3. Compute the secret to send:
+    a. If `security_mode = none`, the value of `secret_passcode` is sent in full and in the clear. _This is the least secure option and is not recommended._
+    b. If `security_mode = hotp`, the client must read the current HOTP counter from `PINPAD_HOTP_COUNTER_CHR_UUID`, then generate and send a 6-digit HOTP code based on that value and using `secret_passcode` as the key.
+    c. If `security_mode = totp`, the client must generate and send a 6-digit TOTP code based on the current time and using `secret_passcode` as the key.
+4. Optionally, read `PINPAD_RPC_RESPONSE_CHR_UUID` to determine whether the operation succeeded.
+
+
+## Security
+
+**Warning:** You should consider this component **totally insecure**. No warranty. Please review `LICENSE.txt`.
+
+When `security_mode` is `hotp` or `totp`, the secret passcode is never revealed on the wire. Captured payloads should not be replayable: In the case of `hotp`, the counter is incremented after every successful authentication and persisted to flash. `totp` follows a standard 30-second window.
+
 
 ## Developer Instructions
 
@@ -109,13 +137,6 @@ Here are some things I found helpful:
 * An unrelated ble stack bugreport, but with great discussion: https://github.com/espressif/arduino-esp32/issues/1038
 * BLE officially assigned numbers (PDF): https://btprodspecificationrefs.blob.core.windows.net/assigned-numbers/Assigned%20Number%20Types/Assigned%20Numbers.pdf
 
-## Security Considerations
-
-**Warning:** You should consider this component **totally insecure**.
-
-It is still just a hack, and I have made no attempt to validate its security properties. For example, someone with the means to sniff nearby BLE traffic could likely capture and replay your PIN.
-
-No warranty. Please review `LICENSE.txt`.
 
 ## Help, Feedback, and Ideas
 

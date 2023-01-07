@@ -1,9 +1,11 @@
 #include "esp32_ble_pinpad_component.h"
+#include "otp.h"
 
 #include "esphome/components/esp32_ble/ble.h"
 #include "esphome/components/esp32_ble_server/ble_2902.h"
 #include "esphome/core/application.h"
 #include "esphome/core/log.h"
+#include <cassert>
 
 #ifdef USE_ESP32
 
@@ -12,13 +14,19 @@ namespace esp32_ble_pinpad {
 
 ESP32BLEPinpadComponent::ESP32BLEPinpadComponent() { }
 
-void ESP32BLEPinpadComponent::set_static_secret_pin(const std::string &pin) {
-  this->static_secret_pin_ = pin;
+void ESP32BLEPinpadComponent::set_security_mode(
+    SecurityMode mode,
+    const std::string &secret_passcode
+) {
+  ESP_LOGD(TAG, "Setting security mode ...");
+  this->security_mode_ = mode;
+  this->secret_passcode_ = secret_passcode;
 }
 
 void ESP32BLEPinpadComponent::setup() {
   ESP_LOGD(TAG, "Setup starting ...");
-  this->service_ = global_ble_server->create_service(SERVICE_UUID, true);
+  this->service_ = global_ble_server->create_service(PINPAD_SERVICE_UUID, true);
+  this->hotp_counter_ = global_preferences->make_preference<uint32_t>(0);
   this->setup_characteristics();
   ESP_LOGD(TAG, "Setup complete!");
 
@@ -28,12 +36,15 @@ void ESP32BLEPinpadComponent::setup() {
 
 void ESP32BLEPinpadComponent::setup_characteristics() {
   ESP_LOGD(TAG, "Setting up characteristics ...");
+
+  // Status characteristic. Contains the state of the device (idle, accepted, rejected, etc).
   this->status_ = this->service_->create_characteristic(
-      STATUS_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+      PINPAD_STATUS_CHR_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
   BLEDescriptor *status_descriptor = new BLE2902();
   this->status_->add_descriptor(status_descriptor);
 
-  this->rpc_ = this->service_->create_characteristic(RPC_COMMAND_UUID, BLECharacteristic::PROPERTY_WRITE);
+  // "RPC" characteristic. Where we'll receive the pin input.
+  this->rpc_ = this->service_->create_characteristic(PINPAD_RPC_COMMAND_CHR_UUID, BLECharacteristic::PROPERTY_WRITE);
   this->rpc_->on_write([this](const std::vector<uint8_t> &data) {
     if (!data.empty()) {
       this->incoming_data_.insert(this->incoming_data_.end(), data.begin(), data.end());
@@ -42,12 +53,61 @@ void ESP32BLEPinpadComponent::setup_characteristics() {
   BLEDescriptor *rpc_descriptor = new BLE2902();
   this->rpc_->add_descriptor(rpc_descriptor);
 
+  // "RPC Response" characteristic. Where we will write the result of a pin attempt.
+  // NOTE(mikey): currently unused.
   this->rpc_response_ = this->service_->create_characteristic(
-      RPC_RESPONSE_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+      PINPAD_RPC_RESPONSE_CHR_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
   BLEDescriptor *rpc_response_descriptor = new BLE2902();
   this->rpc_response_->add_descriptor(rpc_response_descriptor);
 
+  // Security mode characteristic. Tells the client what sort of pin we're expecting.
+  this->security_mode_characteristic_ = this->service_->create_characteristic(
+      PINPAD_SECURITY_MODE_CHR_UUID, BLECharacteristic::PROPERTY_READ);
+  BLEDescriptor *security_mode_descriptor = new BLE2902();
+  this->security_mode_characteristic_->add_descriptor(security_mode_descriptor);
+  switch (this->security_mode_) {
+    case SECURITY_MODE_NONE:
+      this->security_mode_characteristic_->set_value(std::string("none"));
+      break;
+    case SECURITY_MODE_HOTP:
+      this->security_mode_characteristic_->set_value(std::string("hotp"));
+      break;
+    case SECURITY_MODE_TOTP:
+      this->security_mode_characteristic_->set_value(std::string("totp"));
+      break;
+    default:
+      assert(false);
+      break;
+  }
+
+  // HOTP counter characteristic. Only pertinent when security mode is hotp. Gives
+  // our current (persisted) hotp counter value.
+  this->hotp_counter_characteristic_ = this->service_->create_characteristic(
+      PINPAD_HOTP_COUNTER_CHR_UUID, BLECharacteristic::PROPERTY_READ);
+  BLEDescriptor *hotp_counter_descriptor = new BLE2902();
+  this->hotp_counter_characteristic_->add_descriptor(hotp_counter_descriptor);
+  this->hotp_counter_characteristic_->set_value(std::to_string(this->get_current_hotp_counter()));
+
   this->setup_complete_ = true;
+}
+
+uint32_t ESP32BLEPinpadComponent::get_current_hotp_counter() {
+  uint32_t tmp;
+  if (this->hotp_counter_.load(&tmp)) {
+    return tmp;
+  }
+  ESP_LOGW(TAG, "Failed to fetch hotp counter");
+  return 0;
+}
+
+uint32_t ESP32BLEPinpadComponent::increment_hotp_counter() {
+  uint32_t nextVal = this->get_current_hotp_counter() + 1;
+  if (this->hotp_counter_.save(&nextVal)) {
+    this->hotp_counter_characteristic_->set_value(std::to_string(nextVal));
+    return nextVal;
+  }
+  ESP_LOGW(TAG, "Failed to save hotp counter");
+  return nextVal - 1;
 }
 
 void ESP32BLEPinpadComponent::loop() {
@@ -81,6 +141,9 @@ void ESP32BLEPinpadComponent::loop() {
     case STATE_PIN_ACCEPTED : {
       if (this->status_indicator_ != nullptr) {
         this->status_indicator_->turn_on();
+      }
+      if (this->security_mode_ == SECURITY_MODE_HOTP) {
+        this->increment_hotp_counter();
       }
       if (now - this->current_state_start_ > VALIDATION_STATE_HOLD_MILLIS) {
         this->set_state_(STATE_IDLE);
@@ -167,7 +230,38 @@ void ESP32BLEPinpadComponent::process_incoming_data_() {
 
 void ESP32BLEPinpadComponent::validate_pin_(std::string pin) {
   // TODO(mikey): Does ESPHOME support constant time compare?
-  if (this->static_secret_pin_ == pin) {
+  std::string expected_pin;
+
+  switch (this->security_mode_) {
+    case SECURITY_MODE_HOTP: {
+      std::vector<uint8_t> password_vector(this->secret_passcode_.begin(), this->secret_passcode_.end());
+      uint32_t expected_otp_intval = otp::hotp_generate(
+        password_vector.data(),
+        password_vector.size(),
+        this->get_current_hotp_counter(),
+        6
+      );
+      expected_pin = std::to_string(expected_otp_intval);
+      break;
+    }
+    case SECURITY_MODE_TOTP: {
+      std::vector<uint8_t> password_vector(this->secret_passcode_.begin(), this->secret_passcode_.end());
+      uint32_t expected_otp_intval = otp::totp_generate(
+        password_vector.data(),
+        password_vector.size()
+      );
+      expected_pin = std::to_string(expected_otp_intval);
+      break;
+    }
+    case SECURITY_MODE_NONE: {
+      expected_pin = this->secret_passcode_;
+      break;
+    }
+  }
+
+  ESP_LOGD(TAG, "Expected pin: %s", expected_pin.c_str());
+
+  if (pin == expected_pin) {
     ESP_LOGD(TAG, "Pin accepted");
     this->set_state_(STATE_PIN_ACCEPTED);
   } else {
