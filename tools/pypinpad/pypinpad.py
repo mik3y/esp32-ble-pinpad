@@ -11,9 +11,8 @@ SECURITY_MODE_TOTP = "totp"
 PINPAD_SERVICE_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900000"
 PINPAD_STATUS_CHR_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900001"
 PINPAD_RPC_COMMAND_CHR_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900002"
-PINPAD_RPC_RESPONSE_CHR_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900003"
-PINPAD_SECURITY_MODE_CHR_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900004"
-PINPAD_HOTP_COUNTER_CHR_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900005"
+PINPAD_SECURITY_MODE_CHR_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900003"
+PINPAD_HOTP_COUNTER_CHR_UUID = "0003cc02-25ce-4e26-a32f-8c1bfa900004"
 
 
 def debug(msg):
@@ -55,12 +54,25 @@ async def perform_pinin(device_address=None, password=None):
         if pin is None:
             raise ValueError("BUG")
 
+        def status_change_callback(sender, data):
+            status = data.decode()
+            click.echo('Result: ' + click.style(status, bold=True))
+            asyncio.get_event_loop().create_task(client.disconnect())
+
+        await client.start_notify(
+            PINPAD_STATUS_CHR_UUID, status_change_callback,
+        )
+
         debug(f'Sending pin "{pin}" to device ...')
         command_bytes = f"{pin}".encode("ascii")
         service = client.services[PINPAD_SERVICE_UUID]
         characteristic = service.get_characteristic(PINPAD_RPC_COMMAND_CHR_UUID)
         await client.write_gatt_char(characteristic, command_bytes, True)
 
+        # Wait for `status_change_callback` to fire and close our client
+        # connection.
+        while client.is_connected:
+            await asyncio.sleep(0.1)
 
 async def select_device(device_address=None):
     selected_device = None

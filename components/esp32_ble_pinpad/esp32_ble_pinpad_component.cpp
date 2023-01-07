@@ -53,13 +53,6 @@ void ESP32BLEPinpadComponent::setup_characteristics() {
   BLEDescriptor *rpc_descriptor = new BLE2902();
   this->rpc_->add_descriptor(rpc_descriptor);
 
-  // "RPC Response" characteristic. Where we will write the result of a pin attempt.
-  // NOTE(mikey): currently unused.
-  this->rpc_response_ = this->service_->create_characteristic(
-      PINPAD_RPC_RESPONSE_CHR_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
-  BLEDescriptor *rpc_response_descriptor = new BLE2902();
-  this->rpc_response_->add_descriptor(rpc_response_descriptor);
-
   // Security mode characteristic. Tells the client what sort of pin we're expecting.
   this->security_mode_characteristic_ = this->service_->create_characteristic(
       PINPAD_SECURITY_MODE_CHR_UUID, BLECharacteristic::PROPERTY_READ);
@@ -160,8 +153,7 @@ void ESP32BLEPinpadComponent::loop() {
 }
 
 void ESP32BLEPinpadComponent::set_state_(State state) {
-  State old_state = this->state_;
-  if (state == old_state) {
+  if (state == this->state_) {
     return;
   }
 
@@ -170,21 +162,26 @@ void ESP32BLEPinpadComponent::set_state_(State state) {
   this->current_state_start_ = millis();
 
   // Publish to status BLE characteristic.
-  if (this->status_->get_value().empty() || this->status_->get_value()[0] != state) {
-    uint8_t data[1]{state};
-    this->status_->set_value(data, 1);
-    if (old_state != STATE_STOPPED)
-      this->status_->notify();
+  switch (state) {
+    case STATE_STOPPED:
+      this->status_->set_value(std::string("stopped"));
+      break;
+    case STATE_IDLE:
+      this->status_->set_value(std::string("idle"));
+      break;
+    case STATE_PIN_ACCEPTED:
+      this->status_->set_value(std::string("accepted"));
+      break;
+    case STATE_PIN_REJECTED:
+      this->status_->set_value(std::string("rejected"));
+      break;
+    default:
+      assert(false);
   }
+  this->status_->notify();
 
   // Publish to internal triggers.
   this->state_callback_.call();
-}
-
-void ESP32BLEPinpadComponent::send_response_(std::vector<uint8_t> &response) {
-  this->rpc_response_->set_value(response);
-  if (this->state_ != STATE_STOPPED)
-    this->rpc_response_->notify();
 }
 
 void ESP32BLEPinpadComponent::start() {
