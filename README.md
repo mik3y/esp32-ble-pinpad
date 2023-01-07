@@ -13,6 +13,7 @@ It is a component which can trigger other things (such as an `output` device) wh
 - [Usage](#usage)
 - [Configuration options](#configuration-options)
 - [Protocol (how it works)](#protocol-how-it-works)
+- [Testing](#testing)
 - [Security](#security)
 - [Developer Instructions](#developer-instructions)
   - [Using local sources in esphome](#using-local-sources-in-esphome)
@@ -103,6 +104,30 @@ To authenticate ("pin in"), a client performs the following steps:
     b. If `security_mode = hotp`, the client must read the current HOTP counter from `PINPAD_HOTP_COUNTER_CHR_UUID`, then generate and send a 6-digit HOTP code based on that value and using `secret_passcode` as the key.
     c. If `security_mode = totp`, the client must generate and send a 6-digit TOTP code based on the current time and using `secret_passcode` as the key.
 4. Optionally, read `PINPAD_RPC_RESPONSE_CHR_UUID` to determine whether the operation succeeded.
+
+## Testing
+
+A debug program is included at `tools/pypinpad/pypinpad.py` which can be used to send a pin to a locally-discoverable BLE device.
+
+To install the tool's dependencys, `poetry` is required.
+
+```
+cd tools/pypinpad
+poetry install
+```
+
+Example usage:
+
+```
+$ poetry shell
+(pypinpad-py3.10) $ python pypinpad.py pin
+Searching for BLE devices ...
+Found device ble-pinpad-example (9A4935AD-7909-4E76-8481-1D42C213B689). Use it? [Y/n]: y
+Device security mode: hotp
+Please enter the device password: changeme
+Current hotp counter: 13
+Sending pin "100596" to device ...
+```
 
 
 ## Security
