@@ -12,6 +12,10 @@
 namespace esphome {
 namespace esp32_ble_pinpad {
 
+std::string zero_pad(std::string input_str, size_t num_zeros) {
+  return std::string(num_zeros - std::min(num_zeros, input_str.length()), '0') + input_str;
+}
+
 ESP32BLEPinpadComponent::ESP32BLEPinpadComponent() { }
 
 void ESP32BLEPinpadComponent::set_security_mode(
@@ -238,7 +242,7 @@ void ESP32BLEPinpadComponent::validate_pin_(std::string pin) {
         this->get_current_hotp_counter(),
         6
       );
-      expected_pin = std::to_string(expected_otp_intval);
+      expected_pin = zero_pad(std::to_string(expected_otp_intval), 6);
       break;
     }
     case SECURITY_MODE_TOTP: {
@@ -247,7 +251,7 @@ void ESP32BLEPinpadComponent::validate_pin_(std::string pin) {
         password_vector.data(),
         password_vector.size()
       );
-      expected_pin = std::to_string(expected_otp_intval);
+      expected_pin = zero_pad(std::to_string(expected_otp_intval), 6);
       break;
     }
     case SECURITY_MODE_NONE: {
