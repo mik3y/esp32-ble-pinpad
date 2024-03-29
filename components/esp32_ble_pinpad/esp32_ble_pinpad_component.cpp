@@ -29,7 +29,8 @@ void ESP32BLEPinpadComponent::set_security_mode(
 
 void ESP32BLEPinpadComponent::setup() {
   ESP_LOGD(TAG, "Setup starting ...");
-  this->service_ = global_ble_server->create_service(PINPAD_SERVICE_UUID, true);
+  global_ble_server->create_service(ESPBTUUID::from_raw(PINPAD_SERVICE_UUID), true);
+  this->service_ = global_ble_server->get_service(ESPBTUUID::from_raw(PINPAD_SERVICE_UUID));
   this->hotp_counter_ = global_preferences->make_preference<uint32_t>(0);
   this->setup_characteristics();
   ESP_LOGD(TAG, "Setup complete!");
@@ -119,7 +120,7 @@ void ESP32BLEPinpadComponent::loop() {
 
       if (this->service_->is_created() && this->should_start_ && this->setup_complete_) {
         if (this->service_->is_running()) {
-          esp32_ble::global_ble->get_advertising()->start();
+          esp32_ble::global_ble->advertising_start();
 
           this->set_state_(STATE_IDLE);
           this->should_start_ = false;

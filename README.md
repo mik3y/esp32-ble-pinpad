@@ -10,6 +10,7 @@ It is a component which can trigger other things (such as an `output` device) wh
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Why?](#why)
+- [Compatibility](#compatibility)
 - [Usage](#usage)
 - [Configuration options](#configuration-options)
 - [Protocol (how it works)](#protocol-how-it-works)
@@ -32,6 +33,9 @@ You could use it to make a switch, lock, or other device which is unlocked via B
 
 I wrote it because I had exactly that need, and specifically wanted something that didn't require wifi in order to work. Oh, and of course, I was bored/curious.
 
+## Compatibility
+
+* **ESPHome:** Version `2023.11.0` or newer.
 
 ## Usage
 
