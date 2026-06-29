@@ -81,6 +81,14 @@ Of course, you'll probably want to do something other than log when the pin come
     - cover.toggle: garage_door
 ```
 
+> **Note:** `cover.toggle` only works if the target cover *supports* toggle. A
+> `template` cover advertises toggle support only when it defines a
+> `toggle_action:` — otherwise it logs `toggle unsupported` and nothing happens.
+> For a single-button garage remote this is the natural fit (one pulse toggles
+> the door); give the cover a `toggle_action` that drives your switch. If you'd
+> rather not depend on it, trigger the switch directly instead, e.g.
+> `- switch.turn_on: garage_switch`.
+
 ## Configuration options
 
 You can provide these options in the `esp32_ble_pinpad` yaml block:
