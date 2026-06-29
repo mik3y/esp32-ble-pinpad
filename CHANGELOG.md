@@ -1,4 +1,4 @@
-# Current version (in development)
+# v1.2.0 (2026-06-28)
 
 * Updated for compatibility with the reworked `esp32_ble_server` API in current
   ESPHome (`2026.6.0`+).
