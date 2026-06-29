@@ -1,6 +1,7 @@
 import asyncio
 import rich_click as click
 from bleak import BleakScanner, BleakClient
+from bleak.exc import BleakError
 import pyotp
 import base64
 
@@ -29,9 +30,31 @@ async def get_hotp_counter(client):
     return int(rawval.decode())
 
 
+async def connect_device(device, attempts=3, timeout=20.0):
+    # Connect using the BLEDevice object from the scan rather than its address
+    # string: on macOS an address is an opaque CoreBluetooth UUID, and passing
+    # it forces bleak to re-scan to resolve it (which hangs). CoreBluetooth also
+    # likes to time out on the first attempt, so retry a few times.
+    client = BleakClient(device, timeout=timeout)
+    last_error = None
+    for attempt in range(1, attempts + 1):
+        try:
+            await client.connect()
+            return client
+        except (TimeoutError, BleakError) as err:
+            last_error = err
+            debug(f"Connection attempt {attempt}/{attempts} failed: {err!r}")
+    raise click.ClickException(
+        f"Could not connect to {device.name or device.address}: {last_error}. "
+        "Make sure it is powered on, in range, and not already connected to "
+        "another app or a Home Assistant Bluetooth proxy."
+    )
+
+
 async def perform_pinin(device_address=None, password=None):
     device = await select_device(device_address=device_address)
-    async with BleakClient(device.address) as client:
+    client = await connect_device(device)
+    try:
         mode = await get_security_mode(client)
         debug(f"Device security mode: {mode}")
 
@@ -57,7 +80,7 @@ async def perform_pinin(device_address=None, password=None):
         def status_change_callback(sender, data):
             status = data.decode()
             click.echo('Result: ' + click.style(status, bold=True))
-            asyncio.get_event_loop().create_task(client.disconnect())
+            asyncio.create_task(client.disconnect())
 
         await client.start_notify(
             PINPAD_STATUS_CHR_UUID, status_change_callback,
@@ -65,14 +88,18 @@ async def perform_pinin(device_address=None, password=None):
 
         debug(f'Sending pin "{pin}" to device ...')
         command_bytes = f"{pin}".encode("ascii")
-        service = client.services[PINPAD_SERVICE_UUID]
-        characteristic = service.get_characteristic(PINPAD_RPC_COMMAND_CHR_UUID)
-        await client.write_gatt_char(characteristic, command_bytes, True)
+        await client.write_gatt_char(
+            PINPAD_RPC_COMMAND_CHR_UUID, command_bytes, response=True
+        )
 
         # Wait for `status_change_callback` to fire and close our client
         # connection.
         while client.is_connected:
             await asyncio.sleep(0.1)
+    finally:
+        if client.is_connected:
+            await client.disconnect()
+
 
 async def select_device(device_address=None):
     selected_device = None
@@ -89,8 +116,20 @@ async def select_device(device_address=None):
             selected_device = device
             break
     if not selected_device:
-        click.abort("No device found!")
+        raise click.ClickException("No device found!")
     return selected_device
+
+
+async def list_devices():
+    found = False
+    async for device in find_devices():
+        found = True
+        click.echo(
+            click.style(device.name or "(unknown)", fg="blue", bold=True)
+            + click.style(f" ({device.address})", dim=True)
+        )
+    if not found:
+        click.echo("No pinpad devices found.")
 
 
 async def find_devices(device_address=None):
@@ -113,7 +152,8 @@ def cli():
 
 @cli.command()
 def list():
-    asyncio.run(select_device())
+    """List discoverable pinpad devices."""
+    asyncio.run(list_devices())
 
 
 @cli.command()

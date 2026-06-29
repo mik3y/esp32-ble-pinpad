@@ -1,23 +1,34 @@
-[tool.poetry]
+[project]
 name = "pypinpad"
 version = "0.1.0"
 description = ""
-authors = ["mike wakerly <opensource@hoho.com>"]
-license = "MIT"
+authors = [{ name = "mike wakerly", email = "opensource@hoho.com" }]
+requires-python = ">=3.14"
 readme = "README.md"
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "bleak>=3.0.2,<3.1",
+    "rich>=15.0.0,<15.1",
+    "click>=8.4.2,<8.5",
+    "rich-click>=1.9.8,<1.10",
+    "pyotp>=2.10.0,<2.11",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-bleak = "^0.21.1"
-rich = "^13.7.1"
-click = "^8.1.7"
-rich-click = "^1.7.4"
-pyotp = "^2.9.0"
+[project.scripts]
+pypinpad = "pypinpad:cli"
 
+[dependency-groups]
+dev = ["ruff>=0.15.20,<0.16"]
 
-[tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
+[tool.uv]
+default-groups = "all"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11.25,<0.12.0"]
+build-backend = "uv_build"

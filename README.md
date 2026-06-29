@@ -114,18 +114,17 @@ To authenticate ("pin in"), a client performs the following steps:
 
 A debug program is included at `tools/pypinpad/pypinpad.py` which can be used to send a pin to a locally-discoverable BLE device.
 
-To install the tool's dependencies, `poetry` is required.
+To install the tool's dependencies, [`uv`](https://docs.astral.sh/uv/) is required.
 
 ```
 cd tools/pypinpad
-poetry install
+uv sync
 ```
 
 Example usage:
 
 ```
-$ poetry shell
-(pypinpad-py3.10) $ python pypinpad.py pin
+$ uv run pypinpad pin
 Searching for BLE devices ...
 Found device ble-pinpad-example (9A4935AD-7909-4E76-8481-1D42C213B689). Use it? [Y/n]: y
 Device security mode: hotp
