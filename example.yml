@@ -3,6 +3,8 @@ esphome:
 
 esp32:
   board: esp32dev
+  framework:
+    type: esp-idf
 
 external_components:
   - source:
@@ -17,7 +19,7 @@ output:
 
 esp32_ble_pinpad:
   status_indicator: onboard_status_led
-  security_mode: hotp
+  security_mode: totp
   secret_passcode: changeme
   on_pinpad_accepted:
     - logger.log: "Rad! Correct pin was given!"
@@ -32,10 +34,9 @@ logger:
 
 # Enable Home Assistant API
 api:
-  password: ""
 
 ota:
-  password: ""
+  - platform: esphome
 
 wifi:
   ssid: !secret wifi_ssid

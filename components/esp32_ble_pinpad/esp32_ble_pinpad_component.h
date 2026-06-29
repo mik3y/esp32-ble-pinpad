@@ -1,6 +1,5 @@
 #pragma once
 
-#include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/esp32_ble_server/ble_characteristic.h"
 #include "esphome/components/esp32_ble_server/ble_server.h"
 #include "esphome/components/output/binary_output.h"
@@ -42,18 +41,18 @@ enum SecurityMode : uint8_t {
   SECURITY_MODE_TOTP = 0x02,
 };
 
-class ESP32BLEPinpadComponent : public Component, public BLEServiceComponent {
+class ESP32BLEPinpadComponent : public Component {
  public:
   ESP32BLEPinpadComponent();
   void dump_config() override;
   void loop() override;
   void setup() override;
   void setup_characteristics();
-  void on_client_disconnect() override;
+  void on_client_disconnect();
 
   float get_setup_priority() const override;
-  void start() override;
-  void stop() override;
+  void start();
+  void stop();
 
   // Setup code.
   void set_security_mode(SecurityMode mode, const std::string &secret_passcode);

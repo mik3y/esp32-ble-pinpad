@@ -35,7 +35,8 @@ I wrote it because I had exactly that need, and specifically wanted something th
 
 ## Compatibility
 
-* **ESPHome:** Version `2023.11.0` or newer.
+* **ESPHome:** Version `2026.6.0` or newer. (The `esp32_ble_server` API was reworked in recent ESPHome releases; older versions of this component are required for older ESPHome.)
+* **Framework:** `esp-idf` (recommended) or `arduino`.
 
 ## Usage
 

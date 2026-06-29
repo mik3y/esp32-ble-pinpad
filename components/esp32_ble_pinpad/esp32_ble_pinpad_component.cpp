@@ -33,6 +33,11 @@ void ESP32BLEPinpadComponent::setup() {
   this->service_ = global_ble_server->get_service(ESPBTUUID::from_raw(PINPAD_SERVICE_UUID));
   this->hotp_counter_ = global_preferences->make_preference<uint32_t>(0);
   this->setup_characteristics();
+
+  // Reset to idle whenever a client disconnects. Previously delivered via the
+  // BLEServiceComponent interface, which no longer exists.
+  global_ble_server->on_disconnect([this](uint16_t conn_id) { this->on_client_disconnect(); });
+
   ESP_LOGD(TAG, "Setup complete!");
 
   // TODO(mikey): Appropriate for us to start ourselves?
@@ -50,7 +55,7 @@ void ESP32BLEPinpadComponent::setup_characteristics() {
 
   // "RPC" characteristic. Where we'll receive the pin input.
   this->rpc_ = this->service_->create_characteristic(PINPAD_RPC_COMMAND_CHR_UUID, BLECharacteristic::PROPERTY_WRITE);
-  this->rpc_->on_write([this](const std::vector<uint8_t> &data) {
+  this->rpc_->on_write([this](std::span<const uint8_t> data, uint16_t id) {
     if (!data.empty()) {
       this->incoming_data_.insert(this->incoming_data_.end(), data.begin(), data.end());
     }

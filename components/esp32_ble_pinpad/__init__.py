@@ -1,16 +1,15 @@
 from esphome import automation
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import output, esp32_ble_server
+from esphome.components import output
 from esphome.const import CONF_ID, CONF_TRIGGER_ID
 
 
-AUTO_LOAD = ["binary_sensor", "output", "esp32_ble_server"]
+AUTO_LOAD = ["output", "esp32_ble_server"]
 CODEOWNERS = ["@mik3y"]
 CONFLICTS_WITH = ["esp32_ble_tracker", "esp32_ble_beacon"]
 DEPENDENCIES = ["esp32"]
 
-CONF_BLE_SERVER_ID = "ble_server_id"
 CONF_STATUS_INDICATOR = "status_indicator"
 CONF_SECURITY_MODE = "security_mode"
 CONF_SECRET_PASSCODE = "secret_passcode"
@@ -24,7 +23,7 @@ SECURITY_MODE_TOTP = "totp"
 
 esp32_ble_pinpad_ns = cg.esphome_ns.namespace("esp32_ble_pinpad")
 ESP32BLEPinpadComponent = esp32_ble_pinpad_ns.class_(
-    "ESP32BLEPinpadComponent", cg.Component, esp32_ble_server.BLEServiceComponent
+    "ESP32BLEPinpadComponent", cg.Component
 )
 
 SecurityMode = esp32_ble_pinpad_ns.enum("SecurityMode")
@@ -54,7 +53,6 @@ PinpadRejectedTrigger = esp32_ble_pinpad_ns.class_("PinpadRejectedTrigger", auto
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(ESP32BLEPinpadComponent),
-        cv.GenerateID(CONF_BLE_SERVER_ID): cv.use_id(esp32_ble_server.BLEServer),
         cv.Required(CONF_SECURITY_MODE): validate_security_mode,
         cv.Required(CONF_SECRET_PASSCODE): cv.string_strict,
         cv.Optional(CONF_ON_PINPAD_ACCEPTED): automation.validate_automation(
@@ -74,10 +72,6 @@ CONFIG_SCHEMA = cv.Schema(
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-
-    ble_server = await cg.get_variable(config[CONF_BLE_SERVER_ID])
-    cg.add(ble_server.register_service_component(var))
-
 
     cg.add(var.set_security_mode(
         SECURITY_MODES[config[CONF_SECURITY_MODE]],
